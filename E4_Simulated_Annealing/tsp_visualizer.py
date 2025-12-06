@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import random
 import math
+import time
 
 # ===============================
 # CLASS: City
@@ -63,7 +64,7 @@ def acceptance_probability(energy, new_energy, temperature):
 # ===============================
 # FUNCTION: simulated_annealing
 # ===============================
-def simulated_annealing(cities):
+def simulated_annealing(cities, update_interval=100, plot_delay=0.05):
     temp = 10000
     cooling_rate = 0.003
     
@@ -73,6 +74,36 @@ def simulated_annealing(cities):
     print(f"Initial solution distance: {current_solution.get_distance():.2f}")
     
     best = current_solution.copy()
+    
+    # Set up the plot for live updates
+    plt.ion()  # Turn on interactive mode
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.set_title('Simulated Annealing - Route Evolution', fontsize=14)
+    ax.set_xlabel('X Coordinate', fontsize=12)
+    ax.set_ylabel('Y Coordinate', fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-10, 210)
+    ax.set_ylim(-10, 210)
+    
+    # Plot cities once (they stay fixed)
+    x_coords = [city.x for city in cities]
+    y_coords = [city.y for city in cities]
+    city_scatter = ax.scatter(x_coords, y_coords, c='red', s=100, zorder=10, label='Cities')
+    
+    # Mark the first city of initial tour
+    start_city = current_solution.tour[0]
+    start_marker = ax.scatter(start_city.x, start_city.y, c='blue', s=150, 
+                              edgecolors='black', zorder=11, label='Start City')
+    
+    # Text for distance display
+    distance_text = ax.text(0.02, 0.98, '', transform=ax.transAxes,
+                           fontsize=12, verticalalignment='top',
+                           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    ax.legend(loc='upper right')
+    plt.tight_layout()
+    
+    iteration = 0
     
     while temp > 1:
         new_solution = current_solution.copy()
@@ -93,7 +124,73 @@ def simulated_annealing(cities):
         if current_solution.get_distance() < best.get_distance():
             best = current_solution.copy()
         
+        # Update visualization at specified interval
+        if iteration % update_interval == 0:
+            # Clear the previous route line
+            for line in ax.lines:
+                line.remove()
+            
+            # Get current tour coordinates
+            tour_x = [city.x for city in current_solution.tour]
+            tour_y = [city.y for city in current_solution.tour]
+            
+            # Close the loop by returning to start
+            tour_x.append(current_solution.tour[0].x)
+            tour_y.append(current_solution.tour[0].y)
+            
+            # Plot the current route
+            route_line = ax.plot(tour_x, tour_y, 'b-', alpha=0.7, linewidth=1.5, 
+                                 label=f'Current Route (Iteration {iteration})')[0]
+            
+            # Update the start marker position
+            start_marker.set_offsets([[current_solution.tour[0].x, current_solution.tour[0].y]])
+            
+            # Update distance text
+            distance_text.set_text(f'Current Distance: {current_solution.get_distance():.2f}\n'
+                                   f'Best Distance: {best.get_distance():.2f}\n'
+                                   f'Temperature: {temp:.2f}')
+            
+            # Update the plot
+            plt.draw()
+            plt.pause(plot_delay)  # Small delay for human viewing
+        
         temp *= (1 - cooling_rate)
+        iteration += 1
+    
+    # Final update with the best route
+    for line in ax.lines:
+        line.remove()
+    
+    # Plot final best route
+    best_x = [city.x for city in best.tour]
+    best_y = [city.y for city in best.tour]
+    best_x.append(best.tour[0].x)
+    best_y.append(best.tour[0].y)
+    
+    final_route = ax.plot(best_x, best_y, 'g-', alpha=1.0, linewidth=3, 
+                          label=f'Final Route (Distance: {best.get_distance():.2f})')[0]
+    
+    # Update start marker for final route
+    start_marker.set_offsets([[best.tour[0].x, best.tour[0].y]])
+    
+    # Update text for final result
+    distance_text.set_text(f'FINAL RESULT\n'
+                           f'Distance: {best.get_distance():.2f}\n'
+                           f'Total Iterations: {iteration}')
+    
+    # Update legend
+    handles, labels = ax.get_legend_handles_labels()
+    # Remove duplicate "Start City" from legend if it exists multiple times
+    unique_labels = []
+    unique_handles = []
+    for handle, label in zip(handles, labels):
+        if label not in unique_labels:
+            unique_labels.append(label)
+            unique_handles.append(handle)
+    ax.legend(unique_handles, unique_labels, loc='upper right')
+    
+    plt.draw()
+    plt.pause(2)  # Pause to show final result
     
     print(f"Final solution distance: {best.get_distance():.2f}")
 
@@ -102,6 +199,10 @@ def simulated_annealing(cities):
     for i, city in enumerate(best.tour, start=1):
         print(f"{i}. {city}")
     print(f"Back to start → {best.tour[0]}")
+
+    # Keep the plot open
+    plt.ioff()
+    plt.show()
 
     return best
 
@@ -172,5 +273,10 @@ if __name__ == "__main__":
     for c in cities:
         print(c)
     
-    best_tour = simulated_annealing(cities)
+    # Run simulated annealing with live visualization
+    # update_interval: how many iterations between plot updates
+    # plot_delay: time to pause between updates (in seconds)
+    best_tour = simulated_annealing(cities, update_interval=50, plot_delay=0.05)
+    
+    # Optionally show the static comparison plot
     plot_cities_and_route(cities, best_tour)
