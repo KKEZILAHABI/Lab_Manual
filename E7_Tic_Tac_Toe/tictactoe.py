@@ -10,7 +10,7 @@ class TicTacToeGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Tic-Tac-Toe: You vs AI (with Minimax Visualization)")
-        self.root.geometry("900x600")
+        self.root.geometry("900x700")
         self.root.resizable(False, False)
         
         # Initialize game state
